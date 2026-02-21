@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+dist/
+
+# Build outputs
+*.js
+*.d.ts
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
