@@ -7,9 +7,18 @@
     "build": "tsc",
     "start": "NODE_ENV=production node dist/index.js",
     "dev": "NODE_ENV=development tsx watch src/index.ts",
+    "seed": "NODE_ENV=development tsx src/seeds/seed.ts",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "npm run typeorm -- migration:generate -d src/config/database.ts",
-    "migration:run": "npm run typeorm -- migration:run -d src/config/database.ts"
+    "drop:tables": "NODE_ENV=development tsx src/scripts/drop-all-tables.ts",
+    "migration:run": "npm run drop:tables && npm run typeorm -- migration:run -d src/config/database.ts",
+    "migration:run:raw": "npm run typeorm -- migration:run -d src/config/database.ts",
+    "db:setup": "npm run migration:run && npm run seed",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "check": "npm run lint && npm run format:check"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -36,6 +45,13 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.14.10",
     "@types/uuid": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
     "tsx": "^4.16.2",
     "typescript": "^5.5.3"
   },
