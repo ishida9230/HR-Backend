@@ -1,5 +1,10 @@
 # HRシステム バックエンド
 
+## ドキュメント
+
+- [ER図](./docs/ER_DIAGRAM.md) - データベース設計図
+- [ディレクトリ構造](./docs/DIRECTORY_STRUCTURE.md) - プロジェクト構造
+
 ## セットアップ
 
 ```bash
