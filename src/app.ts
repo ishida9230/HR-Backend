@@ -4,7 +4,10 @@ import helmet from "helmet";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 
-import authRoutes from "./routes/auth.routes";
+import errorMiddleware from "./middleware/error.middleware";
+import { getEmployeeProfileHandler } from "./controllers/employee.controller";
+import HttpException from "./exceptions/HttpException";
+import { HTTP_STATUS, ERROR_MESSAGE_ENDPOINT_NOT_FOUND } from "./constants/error-messages";
 
 const app: Application = express();
 
@@ -12,7 +15,7 @@ const app: Application = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
@@ -23,8 +26,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// 処理時間の計測用ミドルウェア
+app.use((request: Request, response: Response, next: express.NextFunction) => {
+  (request as Request & { startTime: number }).startTime = Date.now();
+  next();
+});
+
 // Routes
-app.use("/api/auth", authRoutes);
+// 従業員関連API
+app.get("/api/employees/:id", (req, res, next) => {
+  void getEmployeeProfileHandler(req, res, next);
+});
 
 // Health check
 app.get("/api/health", (_req: Request, res: Response) => {
@@ -32,14 +44,11 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 // 404 handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({ message: "エンドポイントが見つかりません" });
+app.use((_req: Request, _res: Response, next: NextFunction) => {
+  next(new HttpException(HTTP_STATUS.NOT_FOUND, ERROR_MESSAGE_ENDPOINT_NOT_FOUND));
 });
 
 // Error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "サーバーエラーが発生しました" });
-});
+app.use(errorMiddleware);
 
 export default app;

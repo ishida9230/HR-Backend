@@ -17,7 +17,7 @@
     "node": true,
     "es2022": true
   },
-  "ignorePatterns": ["dist", "node_modules", "*.js"],
+  "ignorePatterns": ["dist", "node_modules", "*.js", "coverage", "**/__tests__/**"],
   "rules": {
     "prettier/prettier": "error",
     "@typescript-eslint/no-unused-vars": [

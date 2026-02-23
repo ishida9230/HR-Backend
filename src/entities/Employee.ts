@@ -101,5 +101,5 @@ export function getEmployeeCreateTableSQL(): string {
  * EmploymentType ENUM型のCREATE TYPE文を生成
  */
 export function getEmploymentTypeEnumCreateTypeSQL(): string {
-  return `CREATE TYPE "public"."employees_employment_type_enum" AS ENUM('正社員', '契約社員', '業務委託')`;
+  return `CREATE TYPE "public"."employees_employment_type_enum" AS ENUM('FULL_TIME', 'CONTRACT', 'OUTSOURCING')`;
 }

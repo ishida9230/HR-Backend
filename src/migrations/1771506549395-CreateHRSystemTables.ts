@@ -1,12 +1,9 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-// ENUM型の作成関数をインポート
-import {
-  getDepartmentNameEnumCreateTypeSQL,
-  getDepartmentCreateTableSQL,
-} from "../entities/Department";
-import { getBranchNameEnumCreateTypeSQL, getBranchCreateTableSQL } from "../entities/Branch";
-import { getPositionNameEnumCreateTypeSQL, getPositionCreateTableSQL } from "../entities/Position";
+// テーブル作成関数をインポート
+import { getDepartmentCreateTableSQL } from "../entities/Department";
+import { getBranchCreateTableSQL } from "../entities/Branch";
+import { getPositionCreateTableSQL } from "../entities/Position";
 import { getRoleCreateTableSQL } from "../entities/Role";
 import {
   getEmploymentTypeEnumCreateTypeSQL,
@@ -30,10 +27,7 @@ export class CreateHRSystemTables1771506549395 implements MigrationInterface {
     // `migration:run` は `drop:tables` を先に実行するため、
     // 全てのテーブルとENUM型が削除された状態で実行されます
 
-    // 1. ENUM型の作成（依存関係なし）
-    await queryRunner.query(getDepartmentNameEnumCreateTypeSQL());
-    await queryRunner.query(getBranchNameEnumCreateTypeSQL());
-    await queryRunner.query(getPositionNameEnumCreateTypeSQL());
+    // 1. ENUM型の作成（departments, branches, positionsはstring型に変更）
     await queryRunner.query(getEmploymentTypeEnumCreateTypeSQL());
     await queryRunner.query(getRequestStatusEnumCreateTypeSQL());
     await queryRunner.query(getStepTypeEnumCreateTypeSQL());
@@ -71,15 +65,12 @@ export class CreateHRSystemTables1771506549395 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "branches" CASCADE`);
     await queryRunner.query(`DROP TABLE IF EXISTS "departments" CASCADE`);
 
-    // ENUM型を削除
+    // ENUM型を削除（departments, branches, positionsはstring型に変更されたため削除不要）
     await queryRunner.query(`DROP TYPE IF EXISTS "public"."approval_steps_status_enum" CASCADE`);
     await queryRunner.query(`DROP TYPE IF EXISTS "public"."approval_steps_step_type_enum" CASCADE`);
     await queryRunner.query(`DROP TYPE IF EXISTS "public"."requests_status_enum" CASCADE`);
     await queryRunner.query(
       `DROP TYPE IF EXISTS "public"."employees_employment_type_enum" CASCADE`
     );
-    await queryRunner.query(`DROP TYPE IF EXISTS "public"."position_name_enum" CASCADE`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "public"."branch_name_enum" CASCADE`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "public"."department_name_enum" CASCADE`);
   }
 }

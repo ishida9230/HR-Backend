@@ -12,3 +12,9 @@ dist/
 # Environment files
 .env
 .env.local
+
+# Coverage
+coverage/
+
+# Test files (optional - テストファイルもフォーマットする場合は削除)
+# **/__tests__/**

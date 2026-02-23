@@ -1,5 +1,5 @@
 // TODO: Userテーブル削除によりコメントアウト（参考用に保持）
-// import { Router } from "express";
+import { Router } from "express";
 // import { AuthController } from "../controllers/auth.controller";
 // import { authMiddleware } from "../middleware/auth.middleware";
 
@@ -18,6 +18,5 @@
 // export default router;
 
 // 一時的な空のルーター（エラー回避用）
-import { Router } from "express";
 const router = Router();
 export default router;

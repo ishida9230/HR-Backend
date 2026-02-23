@@ -1,4 +1,3 @@
-import { DepartmentName } from "../entities/Department";
 import { Department } from "../entities/Department";
 import { Repository } from "typeorm";
 
@@ -7,32 +6,32 @@ import { Repository } from "typeorm";
  *
  * INSERT文の内容:
  * INSERT INTO "departments" ("id", "name", "createdAt", "updatedAt") VALUES
- * ('<uuid-1>', '営業部', NOW(), NOW()),
- * ('<uuid-2>', '開発部', NOW(), NOW()),
- * ('<uuid-3>', 'CS部', NOW(), NOW()),
- * ('<uuid-4>', '管理部', NOW(), NOW()),
- * ('<uuid-5>', '人事部', NOW(), NOW());
+ * (1, '営業部', NOW(), NOW()),
+ * (2, '開発部', NOW(), NOW()),
+ * (3, 'CS部', NOW(), NOW()),
+ * (4, '管理部', NOW(), NOW()),
+ * (5, '人事部', NOW(), NOW());
  */
 export const departmentsData = [
   {
     id: 1,
-    name: DepartmentName.SALES,
+    name: "営業部",
   },
   {
     id: 2,
-    name: DepartmentName.DEVELOPMENT,
+    name: "開発部",
   },
   {
     id: 3,
-    name: DepartmentName.CS,
+    name: "CS部",
   },
   {
     id: 4,
-    name: DepartmentName.ADMINISTRATION,
+    name: "管理部",
   },
   {
     id: 5,
-    name: DepartmentName.HR,
+    name: "人事部",
   },
 ];
 

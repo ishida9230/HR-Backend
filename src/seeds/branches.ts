@@ -1,4 +1,3 @@
-import { BranchName } from "../entities/Branch";
 import { Branch } from "../entities/Branch";
 import { Repository } from "typeorm";
 
@@ -7,22 +6,22 @@ import { Repository } from "typeorm";
  *
  * INSERT文の内容:
  * INSERT INTO "branches" ("id", "name", "createdAt", "updatedAt") VALUES
- * ('<uuid-1>', '東京支店', NOW(), NOW()),
- * ('<uuid-2>', '大阪支店', NOW(), NOW()),
- * ('<uuid-3>', '福岡支店', NOW(), NOW());
+ * (1, '東京支店', NOW(), NOW()),
+ * (2, '大阪支店', NOW(), NOW()),
+ * (3, '福岡支店', NOW(), NOW());
  */
 export const branchesData = [
   {
     id: 1,
-    name: BranchName.TOKYO,
+    name: "東京支店",
   },
   {
     id: 2,
-    name: BranchName.OSAKA,
+    name: "大阪支店",
   },
   {
     id: 3,
-    name: BranchName.FUKUOKA,
+    name: "福岡支店",
   },
 ];
 
