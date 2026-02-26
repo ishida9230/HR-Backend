@@ -4,6 +4,7 @@
 
 - [ER図](./docs/ER_DIAGRAM.md) - データベース設計図
 - [ディレクトリ構造](./docs/DIRECTORY_STRUCTURE.md) - プロジェクト構造
+- [実装ステップ](./docs/IMPLEMENTATION_STEPS.md) - プロフィールページ・変更申請ページの実装ステップ
 
 ## セットアップ
 

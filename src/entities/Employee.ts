@@ -66,7 +66,7 @@ export class Employee {
   @OneToMany(() => EmployeeRole, (employeeRole) => employeeRole.employee)
   roles: EmployeeRole[];
 
-  @OneToMany(() => Request, (request) => request.applicantEmployee)
+  @OneToMany(() => Request, (request) => request.employee)
   requests: Request[];
 
   @OneToMany(() => ApprovalStep, (step) => step.actedByEmployee)
@@ -101,5 +101,5 @@ export function getEmployeeCreateTableSQL(): string {
  * EmploymentType ENUM型のCREATE TYPE文を生成
  */
 export function getEmploymentTypeEnumCreateTypeSQL(): string {
-  return `CREATE TYPE "public"."employees_employment_type_enum" AS ENUM('正社員', '契約社員', '業務委託')`;
+  return `CREATE TYPE "public"."employees_employment_type_enum" AS ENUM('FULL_TIME', 'CONTRACT', 'OUTSOURCING')`;
 }

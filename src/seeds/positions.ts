@@ -1,4 +1,3 @@
-import { PositionName } from "../entities/Position";
 import { Position } from "../entities/Position";
 import { Repository } from "typeorm";
 
@@ -7,27 +6,27 @@ import { Repository } from "typeorm";
  *
  * INSERT文の内容:
  * INSERT INTO "positions" ("id", "name", "createdAt", "updatedAt") VALUES
- * ('<uuid-1>', '平社員', NOW(), NOW()),
- * ('<uuid-2>', '主任', NOW(), NOW()),
- * ('<uuid-3>', '部長', NOW(), NOW()),
- * ('<uuid-4>', '社長', NOW(), NOW());
+ * (1, '平社員', NOW(), NOW()),
+ * (2, '主任', NOW(), NOW()),
+ * (3, '部長', NOW(), NOW()),
+ * (4, '社長', NOW(), NOW());
  */
 export const positionsData = [
   {
     id: 1,
-    name: PositionName.REGULAR,
+    name: "平社員",
   },
   {
     id: 2,
-    name: PositionName.CHIEF,
+    name: "主任",
   },
   {
     id: 3,
-    name: PositionName.MANAGER,
+    name: "部長",
   },
   {
     id: 4,
-    name: PositionName.PRESIDENT,
+    name: "社長",
   },
 ];
 
