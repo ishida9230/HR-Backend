@@ -6,6 +6,10 @@ import cookieParser from "cookie-parser";
 
 import errorMiddleware from "./middleware/error.middleware";
 import { getEmployeeProfileHandler } from "./controllers/employee.controller";
+import { getDepartmentsHandler } from "./controllers/department.controller";
+import { getBranchesHandler } from "./controllers/branch.controller";
+import { getPositionsHandler } from "./controllers/position.controller";
+import { createRequestHandler } from "./controllers/request.controller";
 import HttpException from "./exceptions/HttpException";
 import { HTTP_STATUS, ERROR_MESSAGE_ENDPOINT_NOT_FOUND } from "./constants/error-messages";
 
@@ -36,6 +40,24 @@ app.use((request: Request, response: Response, next: express.NextFunction) => {
 // 従業員関連API
 app.get("/api/employees/:id", (req, res, next) => {
   void getEmployeeProfileHandler(req, res, next);
+});
+
+// マスターデータ取得API
+app.get("/api/departments", (req, res, next) => {
+  void getDepartmentsHandler(req, res, next);
+});
+
+app.get("/api/branches", (req, res, next) => {
+  void getBranchesHandler(req, res, next);
+});
+
+app.get("/api/positions", (req, res, next) => {
+  void getPositionsHandler(req, res, next);
+});
+
+// 変更申請作成API
+app.post("/api/requests", (req, res, next) => {
+  void createRequestHandler(req, res, next);
 });
 
 // Health check
