@@ -66,7 +66,7 @@ export class Employee {
   @OneToMany(() => EmployeeRole, (employeeRole) => employeeRole.employee)
   roles: EmployeeRole[];
 
-  @OneToMany(() => Request, (request) => request.applicantEmployee)
+  @OneToMany(() => Request, (request) => request.employee)
   requests: Request[];
 
   @OneToMany(() => ApprovalStep, (step) => step.actedByEmployee)
