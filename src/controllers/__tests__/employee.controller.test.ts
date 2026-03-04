@@ -57,6 +57,8 @@ describe("EmployeeController", () => {
             position: { id: 1, name: "平社員" },
           },
         ],
+        hasPendingChangeRequest: false,
+        latestChangeRequestId: null,
       };
 
       (getEmployeeProfile as jest.Mock).mockResolvedValue(mockProfile);

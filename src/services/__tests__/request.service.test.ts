@@ -1,10 +1,13 @@
-import { createChangeRequest } from "../request.service";
+import { createChangeRequest, formatAssignmentsValue } from "../request.service";
 import {
   saveRequest,
   saveRequestItems,
   getRequestById,
 } from "../../repositories/request.repository";
 import { getEmployeeById } from "../../repositories/employee.repository";
+import { getBranchById } from "../../repositories/branch.repository";
+import { getDepartmentById } from "../../repositories/department.repository";
+import { getPositionById } from "../../repositories/position.repository";
 import { mockRequest } from "../../__tests__/helpers/mocks/request.mock";
 import { mockEmployee } from "../../__tests__/helpers/mocks/employee.mock";
 import HttpException from "../../exceptions/HttpException";
@@ -13,6 +16,10 @@ import {
   ERROR_MESSAGE_EMPLOYEE_NOT_FOUND,
   ERROR_MESSAGE_REQUEST_CREATION_FAILED,
   ERROR_MESSAGE_REQUEST_CREATION_ERROR,
+  ERROR_MESSAGE_INVALID_BRANCH_ID,
+  ERROR_MESSAGE_INVALID_DEPARTMENT_ID,
+  ERROR_MESSAGE_INVALID_POSITION_ID,
+  ERROR_MESSAGE_DATA_FETCH_ERROR,
 } from "../../constants/error-messages";
 import { RequestStatus } from "../../entities/Request";
 import { AppDataSource } from "../../config/database";
@@ -20,6 +27,9 @@ import { AppDataSource } from "../../config/database";
 // Repository層をモック化
 jest.mock("../../repositories/request.repository");
 jest.mock("../../repositories/employee.repository");
+jest.mock("../../repositories/branch.repository");
+jest.mock("../../repositories/department.repository");
+jest.mock("../../repositories/position.repository");
 jest.mock("../../config/database");
 
 describe("RequestService", () => {
@@ -256,6 +266,232 @@ describe("RequestService", () => {
         "message",
         ERROR_MESSAGE_REQUEST_CREATION_ERROR
       );
+    });
+  });
+
+  describe("formatAssignmentsValue", () => {
+    const mockBranch = { id: 1, name: "東京支店" };
+    const mockDepartment = { id: 1, name: "営業部" };
+    const mockPosition = { id: 1, name: "平社員" };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it("正常系: アサインメント配列を正しい形式に変換できる", async () => {
+      const assignments = JSON.stringify([
+        { branchId: 1, departmentId: 1, positionId: 1 },
+        { branchId: 2, departmentId: 2, positionId: 2 },
+      ]);
+
+      (getBranchById as jest.Mock)
+        .mockResolvedValueOnce(mockBranch)
+        .mockResolvedValueOnce({ id: 2, name: "大阪支店" });
+      (getDepartmentById as jest.Mock)
+        .mockResolvedValueOnce(mockDepartment)
+        .mockResolvedValueOnce({ id: 2, name: "開発部" });
+      (getPositionById as jest.Mock)
+        .mockResolvedValueOnce(mockPosition)
+        .mockResolvedValueOnce({ id: 2, name: "主任" });
+
+      const result = await formatAssignmentsValue(assignments);
+      const parsed = JSON.parse(result!);
+
+      expect(parsed).toHaveProperty("branches");
+      expect(parsed).toHaveProperty("departments");
+      expect(parsed).toHaveProperty("positions");
+      expect(parsed.branches).toHaveLength(2);
+      expect(parsed.departments).toHaveLength(2);
+      expect(parsed.positions).toHaveLength(2);
+      expect(parsed.branches[0]).toEqual({ id: 1, name: "東京支店" });
+      expect(parsed.branches[1]).toEqual({ id: 2, name: "大阪支店" });
+      expect(parsed.departments[0]).toEqual({ id: 1, name: "営業部" });
+      expect(parsed.departments[1]).toEqual({ id: 2, name: "開発部" });
+      expect(parsed.positions[0]).toEqual({ id: 1, name: "平社員" });
+      expect(parsed.positions[1]).toEqual({ id: 2, name: "主任" });
+    });
+
+    it("正常系: 同じIDが複数回出現する場合、すべて含まれる", async () => {
+      const assignments = JSON.stringify([
+        { branchId: 1, departmentId: 1, positionId: 1 },
+        { branchId: 2, departmentId: 2, positionId: 2 },
+        { branchId: 3, departmentId: 5, positionId: 1 }, // positionId: 1が再度出現
+      ]);
+
+      (getBranchById as jest.Mock)
+        .mockResolvedValueOnce(mockBranch)
+        .mockResolvedValueOnce({ id: 2, name: "大阪支店" })
+        .mockResolvedValueOnce({ id: 3, name: "福岡支店" });
+      (getDepartmentById as jest.Mock)
+        .mockResolvedValueOnce(mockDepartment)
+        .mockResolvedValueOnce({ id: 2, name: "開発部" })
+        .mockResolvedValueOnce({ id: 5, name: "人事部" });
+      (getPositionById as jest.Mock)
+        .mockResolvedValueOnce(mockPosition)
+        .mockResolvedValueOnce({ id: 2, name: "主任" });
+      // positionId: 1はキャッシュから取得されるため、2回目の呼び出しはない
+
+      const result = await formatAssignmentsValue(assignments);
+      const parsed = JSON.parse(result!);
+
+      expect(parsed.positions).toHaveLength(3);
+      expect(parsed.positions[0]).toEqual({ id: 1, name: "平社員" });
+      expect(parsed.positions[1]).toEqual({ id: 2, name: "主任" });
+      expect(parsed.positions[2]).toEqual({ id: 1, name: "平社員" }); // 重複して含まれる
+    });
+
+    it("正常系: 元の配列の順序が保持される", async () => {
+      const assignments = JSON.stringify([
+        { branchId: 3, departmentId: 5, positionId: 2 },
+        { branchId: 1, departmentId: 1, positionId: 1 },
+        { branchId: 2, departmentId: 2, positionId: 2 },
+      ]);
+
+      (getBranchById as jest.Mock)
+        .mockResolvedValueOnce({ id: 3, name: "福岡支店" })
+        .mockResolvedValueOnce(mockBranch)
+        .mockResolvedValueOnce({ id: 2, name: "大阪支店" });
+      (getDepartmentById as jest.Mock)
+        .mockResolvedValueOnce({ id: 5, name: "人事部" })
+        .mockResolvedValueOnce(mockDepartment)
+        .mockResolvedValueOnce({ id: 2, name: "開発部" });
+      (getPositionById as jest.Mock)
+        .mockResolvedValueOnce({ id: 2, name: "主任" })
+        .mockResolvedValueOnce(mockPosition);
+
+      const result = await formatAssignmentsValue(assignments);
+      const parsed = JSON.parse(result!);
+
+      // 元の配列の順序が保持される
+      expect(parsed.branches[0]).toEqual({ id: 3, name: "福岡支店" });
+      expect(parsed.branches[1]).toEqual({ id: 1, name: "東京支店" });
+      expect(parsed.branches[2]).toEqual({ id: 2, name: "大阪支店" });
+    });
+
+    it("正常系: nullの場合はnullを返す", async () => {
+      const result = await formatAssignmentsValue(null);
+
+      expect(result).toBeNull();
+      expect(getBranchById).not.toHaveBeenCalled();
+      expect(getDepartmentById).not.toHaveBeenCalled();
+      expect(getPositionById).not.toHaveBeenCalled();
+    });
+
+    it("正常系: 空文字列の場合は空文字列を返す", async () => {
+      const result = await formatAssignmentsValue("");
+
+      // 空文字列は falsy なので、そのまま返される
+      expect(result).toBe("");
+      expect(getBranchById).not.toHaveBeenCalled();
+      expect(getDepartmentById).not.toHaveBeenCalled();
+      expect(getPositionById).not.toHaveBeenCalled();
+    });
+
+    it("正常系: 配列でない場合は元の値を返す", async () => {
+      const invalidJson = JSON.stringify({ branchId: 1 });
+
+      const result = await formatAssignmentsValue(invalidJson);
+
+      expect(result).toBe(invalidJson);
+      expect(getBranchById).not.toHaveBeenCalled();
+    });
+
+    it("異常系: 無効な支店IDの場合、HttpExceptionをスロー", async () => {
+      const assignments = JSON.stringify([
+        { branchId: 999, departmentId: 1, positionId: 1 },
+      ]);
+
+      (getBranchById as jest.Mock).mockResolvedValue(null);
+      (getDepartmentById as jest.Mock).mockResolvedValue(mockDepartment);
+      (getPositionById as jest.Mock).mockResolvedValue(mockPosition);
+
+      await expect(formatAssignmentsValue(assignments)).rejects.toThrow(HttpException);
+      await expect(formatAssignmentsValue(assignments)).rejects.toHaveProperty(
+        "status",
+        HTTP_STATUS.BAD_REQUEST
+      );
+      await expect(formatAssignmentsValue(assignments)).rejects.toHaveProperty(
+        "message",
+        ERROR_MESSAGE_INVALID_BRANCH_ID
+      );
+    });
+
+    it("異常系: 無効な部署IDの場合、HttpExceptionをスロー", async () => {
+      const assignments = JSON.stringify([
+        { branchId: 1, departmentId: 999, positionId: 1 },
+      ]);
+
+      (getBranchById as jest.Mock).mockResolvedValue(mockBranch);
+      (getDepartmentById as jest.Mock).mockResolvedValue(null);
+      (getPositionById as jest.Mock).mockResolvedValue(mockPosition);
+
+      await expect(formatAssignmentsValue(assignments)).rejects.toThrow(HttpException);
+      await expect(formatAssignmentsValue(assignments)).rejects.toHaveProperty(
+        "status",
+        HTTP_STATUS.BAD_REQUEST
+      );
+      await expect(formatAssignmentsValue(assignments)).rejects.toHaveProperty(
+        "message",
+        ERROR_MESSAGE_INVALID_DEPARTMENT_ID
+      );
+    });
+
+    it("異常系: 無効な役職IDの場合、HttpExceptionをスロー", async () => {
+      const assignments = JSON.stringify([
+        { branchId: 1, departmentId: 1, positionId: 999 },
+      ]);
+
+      (getBranchById as jest.Mock).mockResolvedValue(mockBranch);
+      (getDepartmentById as jest.Mock).mockResolvedValue(mockDepartment);
+      (getPositionById as jest.Mock).mockResolvedValue(null);
+
+      await expect(formatAssignmentsValue(assignments)).rejects.toThrow(HttpException);
+      await expect(formatAssignmentsValue(assignments)).rejects.toHaveProperty(
+        "status",
+        HTTP_STATUS.BAD_REQUEST
+      );
+      await expect(formatAssignmentsValue(assignments)).rejects.toHaveProperty(
+        "message",
+        ERROR_MESSAGE_INVALID_POSITION_ID
+      );
+    });
+
+    it("異常系: 無効なJSON文字列の場合、HttpExceptionをスロー", async () => {
+      const invalidJson = "invalid json string";
+
+      await expect(formatAssignmentsValue(invalidJson)).rejects.toThrow(HttpException);
+      await expect(formatAssignmentsValue(invalidJson)).rejects.toHaveProperty(
+        "status",
+        HTTP_STATUS.INTERNAL_SERVER_ERROR
+      );
+      await expect(formatAssignmentsValue(invalidJson)).rejects.toHaveProperty(
+        "message",
+        ERROR_MESSAGE_DATA_FETCH_ERROR
+      );
+    });
+
+    it("正常系: マスターデータ取得はキャッシュを使用して最適化される", async () => {
+      const assignments = JSON.stringify([
+        { branchId: 1, departmentId: 1, positionId: 1 },
+        { branchId: 1, departmentId: 1, positionId: 1 }, // 同じIDが再度出現
+      ]);
+
+      (getBranchById as jest.Mock).mockResolvedValueOnce(mockBranch);
+      (getDepartmentById as jest.Mock).mockResolvedValueOnce(mockDepartment);
+      (getPositionById as jest.Mock).mockResolvedValueOnce(mockPosition);
+
+      const result = await formatAssignmentsValue(assignments);
+      const parsed = JSON.parse(result!);
+
+      // 同じIDでも2回含まれる
+      expect(parsed.branches).toHaveLength(2);
+      expect(parsed.departments).toHaveLength(2);
+      expect(parsed.positions).toHaveLength(2);
+
+      // マスターデータ取得は1回のみ（キャッシュを使用）
+      expect(getBranchById).toHaveBeenCalledTimes(1);
+      expect(getDepartmentById).toHaveBeenCalledTimes(1);
+      expect(getPositionById).toHaveBeenCalledTimes(1);
     });
   });
 });

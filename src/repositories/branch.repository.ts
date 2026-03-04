@@ -19,3 +19,15 @@ export async function getAllBranches(): Promise<Branch[]> {
     order: { id: "ASC" },
   });
 }
+
+/**
+ * 支店IDで支店エンティティを取得（データアクセスのみ）
+ * @param id 支店ID
+ * @returns 支店エンティティ、存在しない場合はnull
+ */
+export async function getBranchById(id: number): Promise<Branch | null> {
+  const branchRepository = getBranchRepository();
+  return await branchRepository.findOne({
+    where: { id },
+  });
+}

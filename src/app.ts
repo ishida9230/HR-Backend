@@ -9,7 +9,10 @@ import { getEmployeeProfileHandler } from "./controllers/employee.controller";
 import { getDepartmentsHandler } from "./controllers/department.controller";
 import { getBranchesHandler } from "./controllers/branch.controller";
 import { getPositionsHandler } from "./controllers/position.controller";
-import { createRequestHandler } from "./controllers/request.controller";
+import {
+  createRequestHandler,
+  getRequestByIdHandler,
+} from "./controllers/request.controller";
 import HttpException from "./exceptions/HttpException";
 import { HTTP_STATUS, ERROR_MESSAGE_ENDPOINT_NOT_FOUND } from "./constants/error-messages";
 
@@ -58,6 +61,11 @@ app.get("/api/positions", (req, res, next) => {
 // 変更申請作成API
 app.post("/api/requests", (req, res, next) => {
   void createRequestHandler(req, res, next);
+});
+
+// 変更情報取得API
+app.get("/api/requests/:id", (req, res, next) => {
+  void getRequestByIdHandler(req, res, next);
 });
 
 // Health check

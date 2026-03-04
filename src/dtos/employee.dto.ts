@@ -20,6 +20,8 @@ export interface EmployeeProfileResponse {
   createdAt: string; // ISO 8601形式
   updatedAt: string; // ISO 8601形式
   assignments: EmployeeAssignmentResponse[];
+  hasPendingChangeRequest: boolean; // 変更申請があるかどうかのフラグ
+  latestChangeRequestId: number | null; // 最新の変更申請ID（存在する場合）
 }
 
 /**

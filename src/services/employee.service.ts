@@ -2,16 +2,27 @@ import { Employee } from "../entities/Employee";
 import { mapEmploymentTypeToJapanese } from "../utils/formatter";
 import { getEmployeeById } from "../repositories/employee.repository";
 import { EmployeeProfileResponse } from "../dtos/employee.dto";
+import { getLatestRequestByEmployeeId } from "../repositories/request.repository";
+import { RequestItem } from "../entities/RequestItem";
 
 /**
  * EmployeeエンティティをレスポンスDTOに変換
+ * @param employee 従業員エンティティ
+ * @param latestRequest 最新の変更申請（オプション）
  */
-function mapEmployeeToResponse(employee: Employee): EmployeeProfileResponse {
+function mapEmployeeToResponse(
+  employee: Employee,
+  latestRequest: { id: number; items: RequestItem[] } | null = null
+): EmployeeProfileResponse {
   // ビジネスロジック: end_dateがnullの所属情報のみフィルタリング
   // 注意: SQLでid順にソート済み（repositories/employee.repository.ts参照）
   const activeAssignments = employee.assignments.filter(
     (assignment) => assignment.endDate === null
   );
+
+  // 変更申請があるかどうかのフラグ（変更項目がある場合のみtrue）
+  const hasPendingChangeRequest =
+    latestRequest !== null && latestRequest.items.length > 0;
 
   return {
     id: employee.id,
@@ -49,6 +60,8 @@ function mapEmployeeToResponse(employee: Employee): EmployeeProfileResponse {
         name: assignment.position.name,
       },
     })),
+    hasPendingChangeRequest,
+    latestChangeRequestId: latestRequest?.id ?? null,
   };
 }
 
@@ -62,6 +75,9 @@ export async function getEmployeeProfile(id: number): Promise<EmployeeProfileRes
   // リポジトリ層で従業員エンティティを取得（is_active = trueでフィルタリング済み）
   const employee = await getEmployeeById(id);
 
+  // リポジトリ層で最新の変更申請を取得
+  const latestRequest = await getLatestRequestByEmployeeId(id);
+
   // ビジネスロジック: データ変換（エンティティ → DTO）
-  return mapEmployeeToResponse(employee);
+  return mapEmployeeToResponse(employee, latestRequest);
 }
