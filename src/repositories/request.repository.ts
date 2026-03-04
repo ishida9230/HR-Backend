@@ -68,11 +68,31 @@ export async function saveRequestItems(
  * @param id 変更申請ID
  * @param manager トランザクション用のEntityManager（オプション）
  * @returns 変更申請エンティティ（リレーション含む）
+ * @description
+ * - requestsテーブルから変更申請情報を取得
+ * - request_itemsテーブルから変更項目（items）を取得（relations: ["items"]により自動JOIN）
+ * - Requestエンティティの@OneToManyリレーションにより、request_itemsテーブルと結合される
  */
 export async function getRequestById(id: number, manager?: EntityManager): Promise<Request | null> {
   const requestRepository = getRequestRepository(manager);
   return await requestRepository.findOne({
     where: { id },
+    relations: ["items"], 
+  });
+}
+
+/**
+ * 従業員の最新の変更申請を取得（リレーション含む）
+ * @param employeeId 従業員ID
+ * @returns 最新の変更申請エンティティ（リレーション含む）、存在しない場合はnull
+ */
+export async function getLatestRequestByEmployeeId(
+  employeeId: number
+): Promise<Request | null> {
+  const requestRepository = getRequestRepository();
+  return await requestRepository.findOne({
+    where: { employeeId },
     relations: ["items"],
+    order: { createdAt: "DESC" },
   });
 }

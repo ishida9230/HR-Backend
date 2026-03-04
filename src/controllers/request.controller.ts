@@ -1,11 +1,15 @@
 import { NextFunction, Request, Response } from "express";
-import { createChangeRequest } from "../services/request.service";
+import {
+  createChangeRequest,
+  getChangeRequestById,
+} from "../services/request.service";
 import { CreateRequestRequest } from "../dtos/request.dto";
 import HttpException from "../exceptions/HttpException";
 import {
   HTTP_STATUS,
   ERROR_MESSAGE_INVALID_EMPLOYEE_ID,
   ERROR_MESSAGE_MISSING_REQUIRED_FIELDS,
+  ERROR_MESSAGE_INVALID_REQUEST_ID,
 } from "../constants/error-messages";
 import { validatePositiveIntegerId } from "../utils/validation";
 
@@ -64,3 +68,39 @@ export async function createRequestHandler(
     next(error); // エラーをそのままエラーミドルウェアに渡す
   }
 }
+
+/**
+ * GET /api/requests/:id
+ * 変更申請詳細取得ハンドラー
+ */
+export async function getRequestByIdHandler(
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const id = parseInt(request.params.id, 10);
+
+    // バリデーション: IDが正の整数であることを確認
+    const idValidation = validatePositiveIntegerId(id, "requestId");
+    if (!idValidation.isValid) {
+      next(
+        new HttpException(HTTP_STATUS.BAD_REQUEST, ERROR_MESSAGE_INVALID_REQUEST_ID, {
+          requestId: idValidation.error?.value,
+        })
+      );
+      return;
+    }
+
+    const requestId = idValidation.id!;
+
+    // サービス層で変更申請取得（ビジネスロジック含む）
+    const changeRequest = await getChangeRequestById(requestId);
+
+    // 成功レスポンス
+    response.status(HTTP_STATUS.OK).json(changeRequest);
+  } catch (error) {
+    next(error); // エラーをそのままエラーミドルウェアに渡す
+  }
+}
+

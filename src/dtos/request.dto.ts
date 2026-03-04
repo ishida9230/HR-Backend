@@ -16,6 +16,25 @@ export interface CreateRequestRequest {
 }
 
 /**
+ * 所属情報のレスポンスDTO（変更申請詳細ページ用）
+ * assignmentsフィールドのoldValue/newValueはこの形式のJSON文字列
+ */
+export interface AssignmentsFormattedResponse {
+  branches: Array<{
+    id: number;
+    name: string;
+  }>;
+  departments: Array<{
+    id: number;
+    name: string;
+  }>;
+  positions: Array<{
+    id: number;
+    name: string;
+  }>;
+}
+
+/**
  * 変更申請レスポンスDTO
  */
 export interface RequestResponse {
@@ -32,6 +51,8 @@ export interface RequestResponse {
     fieldKey: string;
     oldValue: string | null;
     newValue: string | null;
+    // assignmentsフィールドの場合、oldValueとnewValueはAssignmentsFormattedResponseのJSON文字列
+    // それ以外のフィールドの場合は通常の文字列
     createdAt: string; // ISO 8601形式
   }>;
 }

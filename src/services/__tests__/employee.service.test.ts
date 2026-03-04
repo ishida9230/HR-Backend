@@ -1,15 +1,19 @@
 import { getEmployeeProfile } from "../employee.service";
 import { getEmployeeById } from "../../repositories/employee.repository";
+import { getLatestRequestByEmployeeId } from "../../repositories/request.repository";
 import { mockEmployee, mockEmployeeWithEndDate } from "../../__tests__/helpers/mocks/employee.mock";
 import HttpException from "../../exceptions/HttpException";
 import { HTTP_STATUS, ERROR_MESSAGE_EMPLOYEE_NOT_FOUND } from "../../constants/error-messages";
 
 // Repository層をモック化
 jest.mock("../../repositories/employee.repository");
+jest.mock("../../repositories/request.repository");
 
 describe("EmployeeService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // デフォルトでgetLatestRequestByEmployeeIdはnullを返す（変更申請なし）
+    (getLatestRequestByEmployeeId as jest.Mock).mockResolvedValue(null);
   });
 
   describe("getEmployeeProfile", () => {
@@ -33,6 +37,8 @@ describe("EmployeeService", () => {
       // Repository層が正しく呼ばれたことを確認
       expect(getEmployeeById).toHaveBeenCalledWith(1);
       expect(getEmployeeById).toHaveBeenCalledTimes(1);
+      expect(getLatestRequestByEmployeeId).toHaveBeenCalledWith(1);
+      expect(getLatestRequestByEmployeeId).toHaveBeenCalledTimes(1);
     });
 
     it("正常系: endDateがnullのassignmentsのみ返却される", async () => {
@@ -88,6 +94,8 @@ describe("EmployeeService", () => {
       // アサーション: HttpExceptionがスローされる
       await expect(getEmployeeProfile(9999)).rejects.toThrow(HttpException);
       expect(getEmployeeById).toHaveBeenCalledWith(9999);
+      // getEmployeeByIdでエラーがスローされるため、getLatestRequestByEmployeeIdは呼ばれない
+      expect(getLatestRequestByEmployeeId).not.toHaveBeenCalled();
     });
   });
 });
