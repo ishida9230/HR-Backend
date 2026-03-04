@@ -32,12 +32,6 @@ export class EmployeeAssignment {
   @Column({ type: "boolean", name: "superior_flag", default: false })
   superiorFlag: boolean;
 
-  @Column({ type: "timestamp", name: "start_date" })
-  startDate: Date;
-
-  @Column({ type: "timestamp", nullable: true, name: "end_date" })
-  endDate: Date | null;
-
   @CreateDateColumn({ type: "timestamp", name: "created_at" })
   createdAt: Date;
 
@@ -70,8 +64,6 @@ export function getEmployeeAssignmentCreateTableSQL(): string {
     "branch_id" integer NOT NULL,
     "position_id" integer NOT NULL,
     "superior_flag" boolean NOT NULL DEFAULT false,
-    "start_date" TIMESTAMP NOT NULL,
-    "end_date" TIMESTAMP,
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),
     CONSTRAINT "PK_employee_assignments" PRIMARY KEY ("id"),
     CONSTRAINT "FK_employee" FOREIGN KEY ("employee_id") REFERENCES "employees"("id") ON DELETE NO ACTION ON UPDATE NO ACTION,

@@ -29,8 +29,6 @@ export const mockEmployee: Employee = {
       branchId: 1,
       positionId: 1,
       superiorFlag: false,
-      startDate: new Date("2020-01-01T00:00:00.000Z"),
-      endDate: null,
       createdAt: new Date("2020-01-01T00:00:00.000Z"),
       department: { id: 1, name: "営業部" } as any,
       branch: { id: 1, name: "東京支店" } as any,
@@ -44,8 +42,6 @@ export const mockEmployee: Employee = {
       branchId: 2,
       positionId: 2,
       superiorFlag: true,
-      startDate: new Date("2021-01-01T00:00:00.000Z"),
-      endDate: null,
       createdAt: new Date("2021-01-01T00:00:00.000Z"),
       department: { id: 2, name: "開発部" } as any,
       branch: { id: 2, name: "大阪支店" } as any,
@@ -56,45 +52,6 @@ export const mockEmployee: Employee = {
   roles: [],
   requests: [],
   approvalSteps: [],
-};
-
-/**
- * モック従業員データ（endDateが設定されているassignmentを含む）
- */
-export const mockEmployeeWithEndDate: Employee = {
-  ...mockEmployee,
-  assignments: [
-    {
-      id: 1,
-      employeeId: 1,
-      departmentId: 1,
-      branchId: 1,
-      positionId: 1,
-      superiorFlag: false,
-      startDate: new Date("2020-01-01T00:00:00.000Z"),
-      endDate: null, // アクティブ
-      createdAt: new Date("2020-01-01T00:00:00.000Z"),
-      department: { id: 1, name: "営業部" } as any,
-      branch: { id: 1, name: "東京支店" } as any,
-      position: { id: 1, name: "平社員" } as any,
-      employee: {} as Employee,
-    } as EmployeeAssignment,
-    {
-      id: 2,
-      employeeId: 1,
-      departmentId: 2,
-      branchId: 2,
-      positionId: 2,
-      superiorFlag: true,
-      startDate: new Date("2021-01-01T00:00:00.000Z"),
-      endDate: new Date("2022-12-31T00:00:00.000Z"), // 非アクティブ
-      createdAt: new Date("2021-01-01T00:00:00.000Z"),
-      department: { id: 2, name: "開発部" } as any,
-      branch: { id: 2, name: "大阪支店" } as any,
-      position: { id: 2, name: "主任" } as any,
-      employee: {} as Employee,
-    } as EmployeeAssignment,
-  ],
 };
 
 /**

@@ -1,8 +1,11 @@
-import { createChangeRequest, formatAssignmentsValue } from "../request.service";
+import { createChangeRequest, formatAssignmentsValue, hideChangeRequest } from "../request.service";
 import {
   saveRequest,
   saveRequestItems,
   getRequestById,
+  hasPendingRequestByEmployeeId,
+  getRequestByIdWithoutRelations,
+  updateRequestIsHidden,
 } from "../../repositories/request.repository";
 import { getEmployeeById } from "../../repositories/employee.repository";
 import { getBranchById } from "../../repositories/branch.repository";
@@ -20,6 +23,9 @@ import {
   ERROR_MESSAGE_INVALID_DEPARTMENT_ID,
   ERROR_MESSAGE_INVALID_POSITION_ID,
   ERROR_MESSAGE_DATA_FETCH_ERROR,
+  ERROR_MESSAGE_PENDING_REQUEST_EXISTS,
+  ERROR_MESSAGE_REQUEST_NOT_FOUND,
+  ERROR_MESSAGE_REQUEST_ALREADY_HIDDEN,
 } from "../../constants/error-messages";
 import { RequestStatus } from "../../entities/Request";
 import { AppDataSource } from "../../config/database";
@@ -66,6 +72,7 @@ describe("RequestService", () => {
     it("正常系: 変更申請を作成できる", async () => {
       // Repository層のモック
       (getEmployeeById as jest.Mock).mockResolvedValue(mockEmployee);
+      (hasPendingRequestByEmployeeId as jest.Mock).mockResolvedValue(false);
       (saveRequest as jest.Mock).mockResolvedValue({
         ...mockRequest,
         id: 1,
@@ -87,6 +94,7 @@ describe("RequestService", () => {
 
       // Repository層が正しく呼ばれたことを確認
       expect(getEmployeeById).toHaveBeenCalledWith(1);
+      expect(hasPendingRequestByEmployeeId).toHaveBeenCalledWith(1);
       expect(saveRequest).toHaveBeenCalledWith(
         {
           employeeId: 1,
@@ -120,6 +128,7 @@ describe("RequestService", () => {
     it("正常系: 日付がISO 8601形式の文字列に変換されている", async () => {
       // Repository層のモック
       (getEmployeeById as jest.Mock).mockResolvedValue(mockEmployee);
+      (hasPendingRequestByEmployeeId as jest.Mock).mockResolvedValue(false);
       (saveRequest as jest.Mock).mockResolvedValue({
         ...mockRequest,
         id: 1,
@@ -162,6 +171,7 @@ describe("RequestService", () => {
 
       // Repository層のモック
       (getEmployeeById as jest.Mock).mockResolvedValue(mockEmployee);
+      (hasPendingRequestByEmployeeId as jest.Mock).mockResolvedValue(false);
       (saveRequest as jest.Mock).mockResolvedValue({
         ...mockRequestWithNulls,
         id: 1,
@@ -174,6 +184,28 @@ describe("RequestService", () => {
       // アサーション
       expect(result.items[0].oldValue).toBeNull();
       expect(result.items[0].newValue).toBe("東京都港区六本木1-1");
+    });
+
+    it("異常系: 承認待ちの変更申請が既に存在する場合、HttpExceptionをスロー", async () => {
+      // Repository層のモック: 承認待ちの申請が存在する
+      (getEmployeeById as jest.Mock).mockResolvedValue(mockEmployee);
+      (hasPendingRequestByEmployeeId as jest.Mock).mockResolvedValue(true);
+
+      // アサーション: HttpExceptionがスローされる
+      await expect(createChangeRequest(validRequestData)).rejects.toThrow(HttpException);
+      await expect(createChangeRequest(validRequestData)).rejects.toHaveProperty(
+        "status",
+        HTTP_STATUS.BAD_REQUEST
+      );
+      await expect(createChangeRequest(validRequestData)).rejects.toHaveProperty(
+        "message",
+        ERROR_MESSAGE_PENDING_REQUEST_EXISTS
+      );
+
+      // Repository層が正しく呼ばれたことを確認
+      expect(getEmployeeById).toHaveBeenCalledWith(1);
+      expect(hasPendingRequestByEmployeeId).toHaveBeenCalledWith(1);
+      expect(AppDataSource.transaction).not.toHaveBeenCalled();
     });
 
     it("異常系: 従業員が見つからない場合、HttpExceptionをスロー", async () => {
@@ -198,12 +230,14 @@ describe("RequestService", () => {
         HTTP_STATUS.NOT_FOUND
       );
       expect(getEmployeeById).toHaveBeenCalledWith(9999);
+      expect(hasPendingRequestByEmployeeId).not.toHaveBeenCalled();
       expect(AppDataSource.transaction).not.toHaveBeenCalled();
     });
 
     it("異常系: 変更申請の作成後に取得に失敗した場合、HttpExceptionをスロー", async () => {
       // Repository層のモック
       (getEmployeeById as jest.Mock).mockResolvedValue(mockEmployee);
+      (hasPendingRequestByEmployeeId as jest.Mock).mockResolvedValue(false);
       (saveRequest as jest.Mock).mockResolvedValue({
         ...mockRequest,
         id: 1,
@@ -227,6 +261,7 @@ describe("RequestService", () => {
     it("異常系: トランザクション内でエラーが発生した場合、HttpExceptionをスロー", async () => {
       // Repository層のモック
       (getEmployeeById as jest.Mock).mockResolvedValue(mockEmployee);
+      (hasPendingRequestByEmployeeId as jest.Mock).mockResolvedValue(false);
       (saveRequest as jest.Mock).mockRejectedValue(new Error("Database error"));
 
       // アサーション: HttpExceptionがスローされる
@@ -397,9 +432,7 @@ describe("RequestService", () => {
     });
 
     it("異常系: 無効な支店IDの場合、HttpExceptionをスロー", async () => {
-      const assignments = JSON.stringify([
-        { branchId: 999, departmentId: 1, positionId: 1 },
-      ]);
+      const assignments = JSON.stringify([{ branchId: 999, departmentId: 1, positionId: 1 }]);
 
       (getBranchById as jest.Mock).mockResolvedValue(null);
       (getDepartmentById as jest.Mock).mockResolvedValue(mockDepartment);
@@ -417,9 +450,7 @@ describe("RequestService", () => {
     });
 
     it("異常系: 無効な部署IDの場合、HttpExceptionをスロー", async () => {
-      const assignments = JSON.stringify([
-        { branchId: 1, departmentId: 999, positionId: 1 },
-      ]);
+      const assignments = JSON.stringify([{ branchId: 1, departmentId: 999, positionId: 1 }]);
 
       (getBranchById as jest.Mock).mockResolvedValue(mockBranch);
       (getDepartmentById as jest.Mock).mockResolvedValue(null);
@@ -437,9 +468,7 @@ describe("RequestService", () => {
     });
 
     it("異常系: 無効な役職IDの場合、HttpExceptionをスロー", async () => {
-      const assignments = JSON.stringify([
-        { branchId: 1, departmentId: 1, positionId: 999 },
-      ]);
+      const assignments = JSON.stringify([{ branchId: 1, departmentId: 1, positionId: 999 }]);
 
       (getBranchById as jest.Mock).mockResolvedValue(mockBranch);
       (getDepartmentById as jest.Mock).mockResolvedValue(mockDepartment);
@@ -492,6 +521,78 @@ describe("RequestService", () => {
       expect(getBranchById).toHaveBeenCalledTimes(1);
       expect(getDepartmentById).toHaveBeenCalledTimes(1);
       expect(getPositionById).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("hideChangeRequest", () => {
+    const requestId = 1;
+    const mockRequestForHide = {
+      ...mockRequest,
+      id: requestId,
+      isHidden: false,
+    };
+    const mockHiddenRequest = {
+      ...mockRequest,
+      id: requestId,
+      isHidden: true,
+    };
+
+    it("正常系: 変更申請を非表示にできる", async () => {
+      // Repository層のモック
+      (getRequestByIdWithoutRelations as jest.Mock).mockResolvedValue(mockRequestForHide);
+      (updateRequestIsHidden as jest.Mock).mockResolvedValue(mockHiddenRequest);
+
+      const result = await hideChangeRequest(requestId);
+
+      // アサーション
+      expect(result).toBeDefined();
+      expect(result).toEqual({ id: requestId });
+      expect(getRequestByIdWithoutRelations).toHaveBeenCalledWith(requestId);
+      expect(updateRequestIsHidden).toHaveBeenCalledWith(mockRequestForHide);
+      expect(getRequestById).not.toHaveBeenCalled();
+    });
+
+    it("異常系: 変更申請が見つからない場合、HttpExceptionをスロー", async () => {
+      // Repository層のモック: nullを返す（存在しない）
+      (getRequestByIdWithoutRelations as jest.Mock).mockResolvedValue(null);
+
+      // アサーション: HttpExceptionがスローされる
+      await expect(hideChangeRequest(requestId)).rejects.toThrow(HttpException);
+      await expect(hideChangeRequest(requestId)).rejects.toHaveProperty(
+        "status",
+        HTTP_STATUS.NOT_FOUND
+      );
+      await expect(hideChangeRequest(requestId)).rejects.toHaveProperty(
+        "message",
+        ERROR_MESSAGE_REQUEST_NOT_FOUND
+      );
+      expect(getRequestByIdWithoutRelations).toHaveBeenCalledWith(requestId);
+      expect(updateRequestIsHidden).not.toHaveBeenCalled();
+      expect(getRequestById).not.toHaveBeenCalled();
+    });
+
+    it("異常系: 既に非表示の場合、HttpExceptionをスロー", async () => {
+      // Repository層のモック: 既に非表示のリクエストを返す
+      const alreadyHiddenRequest = {
+        ...mockRequest,
+        id: requestId,
+        isHidden: true,
+      };
+      (getRequestByIdWithoutRelations as jest.Mock).mockResolvedValue(alreadyHiddenRequest);
+
+      // アサーション: HttpExceptionがスローされる
+      await expect(hideChangeRequest(requestId)).rejects.toThrow(HttpException);
+      await expect(hideChangeRequest(requestId)).rejects.toHaveProperty(
+        "status",
+        HTTP_STATUS.BAD_REQUEST
+      );
+      await expect(hideChangeRequest(requestId)).rejects.toHaveProperty(
+        "message",
+        ERROR_MESSAGE_REQUEST_ALREADY_HIDDEN
+      );
+      expect(getRequestByIdWithoutRelations).toHaveBeenCalledWith(requestId);
+      expect(updateRequestIsHidden).not.toHaveBeenCalled();
+      expect(getRequestById).not.toHaveBeenCalled();
     });
   });
 });

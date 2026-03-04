@@ -12,6 +12,7 @@ import { getPositionsHandler } from "./controllers/position.controller";
 import {
   createRequestHandler,
   getRequestByIdHandler,
+  hideRequestHandler,
 } from "./controllers/request.controller";
 import HttpException from "./exceptions/HttpException";
 import { HTTP_STATUS, ERROR_MESSAGE_ENDPOINT_NOT_FOUND } from "./constants/error-messages";
@@ -66,6 +67,11 @@ app.post("/api/requests", (req, res, next) => {
 // 変更情報取得API
 app.get("/api/requests/:id", (req, res, next) => {
   void getRequestByIdHandler(req, res, next);
+});
+
+// 変更申請を非表示にするAPI
+app.patch("/api/requests/:id/hide", (req, res, next) => {
+  void hideRequestHandler(req, res, next);
 });
 
 // Health check

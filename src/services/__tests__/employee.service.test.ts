@@ -1,7 +1,7 @@
 import { getEmployeeProfile } from "../employee.service";
 import { getEmployeeById } from "../../repositories/employee.repository";
-import { getLatestRequestByEmployeeId } from "../../repositories/request.repository";
-import { mockEmployee, mockEmployeeWithEndDate } from "../../__tests__/helpers/mocks/employee.mock";
+import { getVisibleRequestsByEmployeeId } from "../../repositories/request.repository";
+import { mockEmployee } from "../../__tests__/helpers/mocks/employee.mock";
 import HttpException from "../../exceptions/HttpException";
 import { HTTP_STATUS, ERROR_MESSAGE_EMPLOYEE_NOT_FOUND } from "../../constants/error-messages";
 
@@ -12,8 +12,8 @@ jest.mock("../../repositories/request.repository");
 describe("EmployeeService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // デフォルトでgetLatestRequestByEmployeeIdはnullを返す（変更申請なし）
-    (getLatestRequestByEmployeeId as jest.Mock).mockResolvedValue(null);
+    // デフォルトでgetVisibleRequestsByEmployeeIdは空配列を返す（変更申請なし）
+    (getVisibleRequestsByEmployeeId as jest.Mock).mockResolvedValue([]);
   });
 
   describe("getEmployeeProfile", () => {
@@ -37,20 +37,8 @@ describe("EmployeeService", () => {
       // Repository層が正しく呼ばれたことを確認
       expect(getEmployeeById).toHaveBeenCalledWith(1);
       expect(getEmployeeById).toHaveBeenCalledTimes(1);
-      expect(getLatestRequestByEmployeeId).toHaveBeenCalledWith(1);
-      expect(getLatestRequestByEmployeeId).toHaveBeenCalledTimes(1);
-    });
-
-    it("正常系: endDateがnullのassignmentsのみ返却される", async () => {
-      // Repository層のモック: endDateが設定されているassignmentを含むデータを返却
-      (getEmployeeById as jest.Mock).mockResolvedValue(mockEmployeeWithEndDate);
-
-      const result = await getEmployeeProfile(1);
-
-      // アサーション: endDateがnullのassignmentのみ返却される
-      expect(result.assignments).toHaveLength(1);
-      expect(result.assignments[0].id).toBe(1);
-      expect(result.assignments[0].endDate).toBeNull();
+      expect(getVisibleRequestsByEmployeeId).toHaveBeenCalledWith(1);
+      expect(getVisibleRequestsByEmployeeId).toHaveBeenCalledTimes(1);
     });
 
     it("正常系: assignmentsがid順でソートされている", async () => {
@@ -79,8 +67,7 @@ describe("EmployeeService", () => {
       // アサーション: 日付がISO 8601形式の文字列に変換されている
       expect(typeof result.createdAt).toBe("string");
       expect(typeof result.updatedAt).toBe("string");
-      expect(typeof result.assignments[0].startDate).toBe("string");
-      expect(result.assignments[0].endDate).toBeNull();
+      expect(typeof result.assignments[0].createdAt).toBe("string");
     });
 
     it("異常系: 従業員が見つからない場合、HttpExceptionをスロー", async () => {
@@ -94,8 +81,8 @@ describe("EmployeeService", () => {
       // アサーション: HttpExceptionがスローされる
       await expect(getEmployeeProfile(9999)).rejects.toThrow(HttpException);
       expect(getEmployeeById).toHaveBeenCalledWith(9999);
-      // getEmployeeByIdでエラーがスローされるため、getLatestRequestByEmployeeIdは呼ばれない
-      expect(getLatestRequestByEmployeeId).not.toHaveBeenCalled();
+      // getEmployeeByIdでエラーがスローされるため、getVisibleRequestsByEmployeeIdは呼ばれない
+      expect(getVisibleRequestsByEmployeeId).not.toHaveBeenCalled();
     });
   });
 });

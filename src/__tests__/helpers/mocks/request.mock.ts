@@ -16,6 +16,7 @@ export const mockRequest: Request = {
   text: "住所変更のため申請します",
   submittedAt: new Date("2024-01-15T10:00:00.000Z"),
   completedAt: null,
+  isHidden: false,
   createdAt: new Date("2024-01-15T10:00:00.000Z"),
   updatedAt: new Date("2024-01-15T10:00:00.000Z"),
   employee: {} as Employee,

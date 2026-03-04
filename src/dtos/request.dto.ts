@@ -46,6 +46,7 @@ export interface RequestResponse {
   completedAt: string | null; // ISO 8601形式
   createdAt: string; // ISO 8601形式
   updatedAt: string; // ISO 8601形式
+  isHidden: boolean;
   items: Array<{
     id: number;
     fieldKey: string;
