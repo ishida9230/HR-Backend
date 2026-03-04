@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import {
   createChangeRequest,
   getChangeRequestById,
+  hideChangeRequest,
 } from "../services/request.service";
 import { CreateRequestRequest } from "../dtos/request.dto";
 import HttpException from "../exceptions/HttpException";
@@ -104,3 +105,38 @@ export async function getRequestByIdHandler(
   }
 }
 
+/**
+ * PATCH /api/requests/:id/hide
+ * 変更申請を非表示にするハンドラー
+ */
+export async function hideRequestHandler(
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // throw new Error("test");
+    const id = parseInt(request.params.id, 10);
+
+    // バリデーション: IDが正の整数であることを確認
+    const idValidation = validatePositiveIntegerId(id, "requestId");
+    if (!idValidation.isValid) {
+      next(
+        new HttpException(HTTP_STATUS.BAD_REQUEST, ERROR_MESSAGE_INVALID_REQUEST_ID, {
+          requestId: idValidation.error?.value,
+        })
+      );
+      return;
+    }
+
+    const requestId = idValidation.id!;
+
+    // サービス層で非表示処理（ビジネスロジック含む）
+    const hiddenRequest = await hideChangeRequest(requestId);
+
+    // 成功レスポンス
+    response.status(HTTP_STATUS.OK).json(hiddenRequest);
+  } catch (error) {
+    next(error); // エラーをそのままエラーミドルウェアに渡す
+  }
+}

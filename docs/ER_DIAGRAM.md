@@ -22,15 +22,15 @@ erDiagram
     
     employees {
         integer id PK
-        integer employee_code UK
-        varchar email UK
+        integer employee_code UK "UNIQUE制約あり"
+        varchar email UK "UNIQUE制約あり"
         varchar first_name
         varchar last_name
         varchar postal_code
         varchar address
         varchar phone
         enum employment_type "FULL_TIME, CONTRACT, OUTSOURCING"
-        boolean is_active
+        boolean is_active "default: true"
         timestamp created_at
         timestamp updated_at
     }
@@ -38,30 +38,30 @@ erDiagram
     departments {
         integer id PK
         varchar name
-        timestamp createdAt
-        timestamp updatedAt
+        timestamp createdAt "カラム名: createdAt"
+        timestamp updatedAt "カラム名: updatedAt"
     }
     
     branches {
         integer id PK
         varchar name
-        timestamp createdAt
-        timestamp updatedAt
+        timestamp createdAt "カラム名: createdAt"
+        timestamp updatedAt "カラム名: updatedAt"
     }
     
     positions {
         integer id PK
         varchar name
-        timestamp createdAt
-        timestamp updatedAt
+        timestamp createdAt "カラム名: createdAt"
+        timestamp updatedAt "カラム名: updatedAt"
     }
     
     roles {
         integer id PK
         varchar name
-        text_array permissions
-        timestamp createdAt
-        timestamp updatedAt
+        text_array permissions "PostgreSQL text array型"
+        timestamp createdAt "カラム名: createdAt"
+        timestamp updatedAt "カラム名: updatedAt"
     }
     
     employee_assignments {
@@ -70,10 +70,8 @@ erDiagram
         integer department_id FK
         integer branch_id FK
         integer position_id FK
-        boolean superior_flag
-        timestamp start_date
-        timestamp end_date
-        timestamp created_at
+        boolean superior_flag "default: false"
+        timestamp created_at "start_date, end_dateは未実装"
     }
     
     employee_roles {
@@ -86,10 +84,11 @@ erDiagram
     requests {
         integer id PK
         integer employee_id FK
-        enum status "上長承認待ち, 人事承認待ち, 差し戻し, 完了"
+        enum status "PENDING_MANAGER, PENDING_HR, CHANGES_REQUESTED, COMPLETED"
         text text
-        timestamp submitted_at
-        timestamp completed_at
+        timestamp submitted_at "nullable"
+        timestamp completed_at "nullable"
+        boolean is_hidden "default: false (追加フィールド)"
         timestamp created_at
         timestamp updated_at
     }
@@ -98,8 +97,8 @@ erDiagram
         integer id PK
         integer request_id FK
         varchar field_key
-        text old_value
-        text new_value
+        text old_value "nullable"
+        text new_value "nullable"
         timestamp created_at
     }
     
@@ -108,10 +107,10 @@ erDiagram
         integer request_id FK
         integer step_order
         enum step_type "MANAGER, HR"
-        enum status "PENDING, APPROVED, CHANGES_REQUESTED"
-        integer acted_by_employee_id FK
-        text comment
-        timestamp acted_at
+        enum status "PENDING, APPROVED, CHANGES_REQUESTED (default: PENDING)"
+        integer acted_by_employee_id FK "nullable"
+        text comment "nullable"
+        timestamp acted_at "nullable"
         timestamp created_at
     }
 ```

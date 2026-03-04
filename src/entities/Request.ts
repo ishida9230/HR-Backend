@@ -44,6 +44,9 @@ export class Request {
   @Column({ type: "timestamp", nullable: true, name: "completed_at" })
   completedAt: Date | null;
 
+  @Column({ type: "boolean", default: false, name: "is_hidden" })
+  isHidden: boolean;
+
   @CreateDateColumn({ type: "timestamp", name: "created_at" })
   createdAt: Date;
 
@@ -73,6 +76,7 @@ export function getRequestCreateTableSQL(): string {
     "text" text NOT NULL,
     "submitted_at" TIMESTAMP,
     "completed_at" TIMESTAMP,
+    "is_hidden" boolean NOT NULL DEFAULT false,
     "created_at" TIMESTAMP NOT NULL DEFAULT now(),
     "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
     CONSTRAINT "PK_requests" PRIMARY KEY ("id"),

@@ -1,28 +1,35 @@
 import { Employee } from "../entities/Employee";
 import { mapEmploymentTypeToJapanese } from "../utils/formatter";
 import { getEmployeeById } from "../repositories/employee.repository";
-import { EmployeeProfileResponse } from "../dtos/employee.dto";
-import { getLatestRequestByEmployeeId } from "../repositories/request.repository";
-import { RequestItem } from "../entities/RequestItem";
+import { EmployeeProfileResponse, ChangeRequestInfo } from "../dtos/employee.dto";
+import { getVisibleRequestsByEmployeeId } from "../repositories/request.repository";
+import { Request, RequestStatus } from "../entities/Request";
 
 /**
  * EmployeeエンティティをレスポンスDTOに変換
  * @param employee 従業員エンティティ
- * @param latestRequest 最新の変更申請（オプション）
+ * @param visibleRequests 非表示でない変更申請の配列（ソート済み）
  */
 function mapEmployeeToResponse(
   employee: Employee,
-  latestRequest: { id: number; items: RequestItem[] } | null = null
+  visibleRequests: Request[] = []
 ): EmployeeProfileResponse {
-  // ビジネスロジック: end_dateがnullの所属情報のみフィルタリング
+  // ビジネスロジック: 全ての所属情報を取得
   // 注意: SQLでid順にソート済み（repositories/employee.repository.ts参照）
-  const activeAssignments = employee.assignments.filter(
-    (assignment) => assignment.endDate === null
-  );
+  const activeAssignments = employee.assignments;
 
-  // 変更申請があるかどうかのフラグ（変更項目がある場合のみtrue）
-  const hasPendingChangeRequest =
-    latestRequest !== null && latestRequest.items.length > 0;
+  // 承認待ちの申請があるかチェック（完了、差し戻し以外）
+  const pendingRequest = visibleRequests.find(
+    (req) => req.status === RequestStatus.PENDING_MANAGER || req.status === RequestStatus.PENDING_HR
+  );
+  const hasPendingChangeRequest = pendingRequest !== undefined;
+
+  // 非表示でない変更申請を全て取得（isHidden: false）
+  const changeRequests: ChangeRequestInfo[] = visibleRequests.map((req) => ({
+    id: req.id,
+    status: req.status,
+    isHidden: req.isHidden,
+  }));
 
   return {
     id: employee.id,
@@ -44,8 +51,6 @@ function mapEmployeeToResponse(
       branchId: assignment.branchId,
       positionId: assignment.positionId,
       superiorFlag: assignment.superiorFlag,
-      startDate: assignment.startDate.toISOString(),
-      endDate: assignment.endDate ? assignment.endDate.toISOString() : null,
       createdAt: assignment.createdAt.toISOString(),
       department: {
         id: assignment.department.id,
@@ -61,7 +66,7 @@ function mapEmployeeToResponse(
       },
     })),
     hasPendingChangeRequest,
-    latestChangeRequestId: latestRequest?.id ?? null,
+    changeRequests,
   };
 }
 
@@ -75,9 +80,9 @@ export async function getEmployeeProfile(id: number): Promise<EmployeeProfileRes
   // リポジトリ層で従業員エンティティを取得（is_active = trueでフィルタリング済み）
   const employee = await getEmployeeById(id);
 
-  // リポジトリ層で最新の変更申請を取得
-  const latestRequest = await getLatestRequestByEmployeeId(id);
+  // リポジトリ層で非表示でない変更申請を全て取得
+  const visibleRequests = await getVisibleRequestsByEmployeeId(id);
 
   // ビジネスロジック: データ変換（エンティティ → DTO）
-  return mapEmployeeToResponse(employee, latestRequest);
+  return mapEmployeeToResponse(employee, visibleRequests);
 }
