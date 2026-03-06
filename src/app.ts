@@ -13,6 +13,8 @@ import {
   createRequestHandler,
   getRequestByIdHandler,
   hideRequestHandler,
+  getRequestCountsHandler,
+  getRequestListHandler,
 } from "./controllers/request.controller";
 import HttpException from "./exceptions/HttpException";
 import { HTTP_STATUS, ERROR_MESSAGE_ENDPOINT_NOT_FOUND } from "./constants/error-messages";
@@ -62,6 +64,16 @@ app.get("/api/positions", (req, res, next) => {
 // 変更申請作成API
 app.post("/api/requests", (req, res, next) => {
   void createRequestHandler(req, res, next);
+});
+
+// 申請件数取得API
+app.get("/api/requests/count", (req, res, next) => {
+  void getRequestCountsHandler(req, res, next);
+});
+
+// 申請一覧取得API（:idより前に定義する必要がある）
+app.get("/api/requests/list", (req, res, next) => {
+  void getRequestListHandler(req, res, next);
 });
 
 // 変更情報取得API

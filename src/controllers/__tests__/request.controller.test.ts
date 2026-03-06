@@ -1,8 +1,16 @@
 import request from "supertest";
 import express, { Application } from "express";
-import { createRequestHandler, hideRequestHandler } from "../request.controller";
-import { createChangeRequest, hideChangeRequest } from "../../services/request.service";
-import { RequestResponse } from "../../dtos/request.dto";
+import {
+  createRequestHandler,
+  hideRequestHandler,
+  getRequestListHandler,
+} from "../request.controller";
+import {
+  createChangeRequest,
+  hideChangeRequest,
+  getRequestListService,
+} from "../../services/request.service";
+import { RequestResponse, RequestListResponse } from "../../dtos/request.dto";
 import errorMiddleware from "../../middleware/error.middleware";
 import HttpException from "../../exceptions/HttpException";
 import {
@@ -389,6 +397,315 @@ describe("RequestController", () => {
       const response = await request(app).patch("/api/requests/1/hide");
 
       // アサーション
+      expect(response.status).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+      expect(response.body.error).toBeDefined();
+      expect(response.body.error.code).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);
+    });
+  });
+
+  describe("GET /api/requests/list", () => {
+    beforeEach(() => {
+      app = express();
+      app.use(express.json());
+      app.get("/api/requests/list", getRequestListHandler);
+      app.use(errorMiddleware);
+      jest.clearAllMocks();
+    });
+
+    it("正常系: 申請一覧を取得できる（パラメータなし）", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [
+          {
+            id: 1,
+            title: "住所変更のため申請します",
+            employee: {
+              id: 1,
+              firstName: "太郎",
+              lastName: "山田",
+            },
+            departments: [{ id: 1, name: "営業部" }],
+            branches: [{ id: 1, name: "東京支店" }],
+            positions: [{ id: 1, name: "マネージャー" }],
+            status: "PENDING_MANAGER",
+            submittedAt: "2024-01-15T10:00:00.000Z",
+            updatedAt: "2024-01-15T10:00:00.000Z",
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 25,
+        totalPages: 1,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get("/api/requests/list");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: undefined,
+        employeeName: undefined,
+        departmentId: undefined,
+        branchId: undefined,
+        positionId: undefined,
+        page: 1,
+        limit: 25,
+      });
+      expect(getRequestListService).toHaveBeenCalledTimes(1);
+    });
+
+    it("正常系: ステータスでフィルタリングできる", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [],
+        total: 0,
+        page: 1,
+        limit: 25,
+        totalPages: 0,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get("/api/requests/list?status=PENDING_MANAGER");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: "PENDING_MANAGER",
+        employeeName: undefined,
+        departmentId: undefined,
+        branchId: undefined,
+        positionId: undefined,
+        page: 1,
+        limit: 25,
+      });
+    });
+
+    it("正常系: 従業員名でフィルタリングできる（大文字・小文字を区別しない）", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [
+          {
+            id: 1,
+            title: "住所変更のため申請します",
+            employee: {
+              id: 1,
+              firstName: "Taro",
+              lastName: "Yamada",
+            },
+            departments: [{ id: 1, name: "営業部" }],
+            branches: [{ id: 1, name: "東京支店" }],
+            positions: [{ id: 1, name: "マネージャー" }],
+            status: "PENDING_MANAGER",
+            submittedAt: "2024-01-15T10:00:00.000Z",
+            updatedAt: "2024-01-15T10:00:00.000Z",
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 25,
+        totalPages: 1,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      // 小文字で検索しても大文字の名前がヒットすることを確認
+      const response = await request(app).get("/api/requests/list?employeeName=taro");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: undefined,
+        employeeName: "taro",
+        departmentId: undefined,
+        branchId: undefined,
+        positionId: undefined,
+        page: 1,
+        limit: 25,
+      });
+    });
+
+    it("正常系: 部署IDでフィルタリングできる", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [],
+        total: 0,
+        page: 1,
+        limit: 25,
+        totalPages: 0,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get("/api/requests/list?departmentId=1");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: undefined,
+        employeeName: undefined,
+        departmentId: 1,
+        branchId: undefined,
+        positionId: undefined,
+        page: 1,
+        limit: 25,
+      });
+    });
+
+    it("正常系: 支店IDでフィルタリングできる", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [],
+        total: 0,
+        page: 1,
+        limit: 25,
+        totalPages: 0,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get("/api/requests/list?branchId=1");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: undefined,
+        employeeName: undefined,
+        departmentId: undefined,
+        branchId: 1,
+        positionId: undefined,
+        page: 1,
+        limit: 25,
+      });
+    });
+
+    it("正常系: 役職IDでフィルタリングできる", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [],
+        total: 0,
+        page: 1,
+        limit: 25,
+        totalPages: 0,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get("/api/requests/list?positionId=1");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: undefined,
+        employeeName: undefined,
+        departmentId: undefined,
+        branchId: undefined,
+        positionId: 1,
+        page: 1,
+        limit: 25,
+      });
+    });
+
+    it("正常系: ページネーションが機能する", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [],
+        total: 50,
+        page: 2,
+        limit: 25,
+        totalPages: 2,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get("/api/requests/list?page=2&limit=25");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: undefined,
+        employeeName: undefined,
+        departmentId: undefined,
+        branchId: undefined,
+        positionId: undefined,
+        page: 2,
+        limit: 25,
+      });
+    });
+
+    it("正常系: 複数の条件を組み合わせてフィルタリングできる", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [],
+        total: 0,
+        page: 1,
+        limit: 25,
+        totalPages: 0,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get(
+        "/api/requests/list?status=PENDING_MANAGER&employeeName=山田&departmentId=1&branchId=1&positionId=1&page=1&limit=10"
+      );
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(getRequestListService).toHaveBeenCalledWith({
+        status: "PENDING_MANAGER",
+        employeeName: "山田",
+        departmentId: 1,
+        branchId: 1,
+        positionId: 1,
+        page: 1,
+        limit: 10,
+      });
+    });
+
+    it("正常系: 複数の所属情報がある場合、すべて返される", async () => {
+      const mockResponse: RequestListResponse = {
+        requests: [
+          {
+            id: 1,
+            title: "住所変更のため申請します",
+            employee: {
+              id: 1,
+              firstName: "太郎",
+              lastName: "山田",
+            },
+            departments: [
+              { id: 1, name: "営業部" },
+              { id: 2, name: "開発部" },
+            ],
+            branches: [
+              { id: 1, name: "東京支店" },
+              { id: 2, name: "大阪支店" },
+            ],
+            positions: [
+              { id: 1, name: "マネージャー" },
+              { id: 2, name: "シニアマネージャー" },
+            ],
+            status: "PENDING_MANAGER",
+            submittedAt: "2024-01-15T10:00:00.000Z",
+            updatedAt: "2024-01-15T10:00:00.000Z",
+          },
+        ],
+        total: 1,
+        page: 1,
+        limit: 25,
+        totalPages: 1,
+      };
+
+      (getRequestListService as jest.Mock).mockResolvedValue(mockResponse);
+
+      const response = await request(app).get("/api/requests/list");
+
+      expect(response.status).toBe(HTTP_STATUS.OK);
+      expect(response.body).toEqual(mockResponse);
+      expect(response.body.requests[0].departments).toHaveLength(2);
+      expect(response.body.requests[0].branches).toHaveLength(2);
+      expect(response.body.requests[0].positions).toHaveLength(2);
+    });
+
+    it("異常系: サービス層でエラーが発生した場合、エラーミドルウェアで処理される", async () => {
+      (getRequestListService as jest.Mock).mockRejectedValue(new Error("Internal server error"));
+
+      const response = await request(app).get("/api/requests/list");
+
       expect(response.status).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);
       expect(response.body.error).toBeDefined();
       expect(response.body.error.code).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);

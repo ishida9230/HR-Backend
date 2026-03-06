@@ -3,8 +3,11 @@ import {
   createChangeRequest,
   getChangeRequestById,
   hideChangeRequest,
+  getRequestCountsService,
+  getRequestListService,
 } from "../services/request.service";
 import { CreateRequestRequest } from "../dtos/request.dto";
+import { RequestListQuery } from "../dtos/request.dto";
 import HttpException from "../exceptions/HttpException";
 import {
   HTTP_STATUS,
@@ -13,6 +16,7 @@ import {
   ERROR_MESSAGE_INVALID_REQUEST_ID,
 } from "../constants/error-messages";
 import { validatePositiveIntegerId } from "../utils/validation";
+import { parseIdArray } from "../utils/query-parser";
 
 /**
  * POST /api/requests
@@ -136,6 +140,83 @@ export async function hideRequestHandler(
 
     // 成功レスポンス
     response.status(HTTP_STATUS.OK).json(hiddenRequest);
+  } catch (error) {
+    next(error); // エラーをそのままエラーミドルウェアに渡す
+  }
+}
+
+/**
+ * GET /api/requests/count
+ * 申請件数取得ハンドラー
+ */
+export async function getRequestCountsHandler(
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // サービス層で申請件数取得
+    const counts = await getRequestCountsService();
+
+    // 成功レスポンス
+    response.status(HTTP_STATUS.OK).json(counts);
+  } catch (error) {
+    next(error); // エラーをそのままエラーミドルウェアに渡す
+  }
+}
+
+/**
+ * GET /api/requests/list
+ * 申請一覧取得ハンドラー
+ */
+export async function getRequestListHandler(
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const query = request.query;
+
+    // クエリパラメータをパース（Expressのクエリパラメータは文字列または文字列配列）
+    const statusParams = Array.isArray(query.status)
+      ? query.status
+      : query.status
+      ? [query.status]
+      : [];
+    const departmentIdParams = Array.isArray(query.departmentIds)
+      ? query.departmentIds
+      : query.departmentIds
+      ? [query.departmentIds]
+      : [];
+    const branchIdParams = Array.isArray(query.branchIds)
+      ? query.branchIds
+      : query.branchIds
+      ? [query.branchIds]
+      : [];
+    const positionIdParams = Array.isArray(query.positionIds)
+      ? query.positionIds
+      : query.positionIds
+      ? [query.positionIds]
+      : [];
+
+    const listQuery: RequestListQuery = {
+      statuses:
+        statusParams.length > 0
+          ? statusParams.map((s) => String(s)).filter((s) => s.length > 0)
+          : undefined,
+      employeeName: typeof query.employeeName === "string" ? query.employeeName : undefined,
+      departmentIds: departmentIdParams.length > 0 ? parseIdArray(departmentIdParams) : undefined,
+      branchIds: branchIdParams.length > 0 ? parseIdArray(branchIdParams) : undefined,
+      positionIds: positionIdParams.length > 0 ? parseIdArray(positionIdParams) : undefined,
+      page: query.page ? parseInt(String(query.page), 10) : 1,
+      limit: query.limit ? parseInt(String(query.limit), 10) : 25,
+    };
+
+    // サービス層で申請一覧取得
+    const result = await getRequestListService(listQuery);
+
+    // 成功レスポンス
+    response.status(HTTP_STATUS.OK).json(result);
   } catch (error) {
     next(error); // エラーをそのままエラーミドルウェアに渡す
   }

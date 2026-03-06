@@ -181,3 +181,107 @@ export async function updateRequestIsHidden(request: Request): Promise<Request> 
   request.isHidden = true;
   return await requestRepository.save(request);
 }
+
+/**
+ * 申請件数をステータス別に取得
+ * @returns ステータス別の申請件数（上長承認待ち、人事承認待ちのみ）
+ */
+export async function getRequestCounts(): Promise<{
+  pendingManager: number;
+  pendingHr: number;
+}> {
+  const requestRepository = getRequestRepository();
+
+  const [pendingManager, pendingHr] = await Promise.all([
+    requestRepository.count({
+      where: { status: RequestStatus.PENDING_MANAGER },
+    }),
+    requestRepository.count({
+      where: { status: RequestStatus.PENDING_HR },
+    }),
+  ]);
+
+  return {
+    pendingManager,
+    pendingHr,
+  };
+}
+
+/**
+ * 申請一覧を取得（検索、フィルタリング、ページネーション対応）
+ * 一旦コメントアウト - 後で確認予定
+ * @param options 検索・フィルタリング・ページネーションオプション
+ * @returns 申請一覧とページネーション情報
+ */
+export async function getRequestList(options: {
+  statuses?: RequestStatus[];
+  employeeName?: string;
+  departmentIds?: number[];
+  branchIds?: number[];
+  positionIds?: number[];
+  page?: number;
+  limit?: number;
+}): Promise<{
+  requests: Request[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}> {
+  const requestRepository = getRequestRepository();
+  const { statuses, employeeName, departmentIds, branchIds, positionIds, page = 1, limit = 25 } = options;
+
+  const queryBuilder = requestRepository
+    .createQueryBuilder("request")
+    .leftJoinAndSelect("request.employee", "employee")
+    .leftJoinAndSelect("employee.assignments", "assignment")
+    .leftJoinAndSelect("assignment.department", "department")
+    .leftJoinAndSelect("assignment.branch", "branch")
+    .leftJoinAndSelect("assignment.position", "position");
+
+  // ステータスフィルタ（複数選択対応）
+  if (statuses && statuses.length > 0) {
+    queryBuilder.andWhere("request.status IN (:...statuses)", { statuses });
+  }
+
+  // 従業員名フィルタ（部分一致、大文字・小文字を区別しない）
+  if (employeeName) {
+    queryBuilder.andWhere(
+      "(employee.firstName ILIKE :employeeName OR employee.lastName ILIKE :employeeName)",
+      { employeeName: `%${employeeName}%` }
+    );
+  }
+
+  // 部署フィルタ（複数選択対応）
+  if (departmentIds && departmentIds.length > 0) {
+    queryBuilder.andWhere("department.id IN (:...departmentIds)", { departmentIds });
+  }
+
+  // 支店フィルタ（複数選択対応）
+  if (branchIds && branchIds.length > 0) {
+    queryBuilder.andWhere("branch.id IN (:...branchIds)", { branchIds });
+  }
+
+  // 役職フィルタ（複数選択対応）
+  if (positionIds && positionIds.length > 0) {
+    queryBuilder.andWhere("position.id IN (:...positionIds)", { positionIds });
+  }
+
+  // 申請日の降順でソート（新しい順）
+  queryBuilder.orderBy("request.submittedAt", "DESC", "NULLS LAST");
+
+  // ページネーション
+  const skip = (page - 1) * limit;
+  queryBuilder.skip(skip).take(limit);
+
+  const [requests, total] = await queryBuilder.getManyAndCount();
+  const totalPages = Math.ceil(total / limit);
+
+  return {
+    requests,
+    total,
+    page,
+    limit,
+    totalPages,
+  };
+}
