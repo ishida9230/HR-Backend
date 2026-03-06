@@ -57,3 +57,63 @@ export interface RequestResponse {
     createdAt: string; // ISO 8601形式
   }>;
 }
+
+/**
+ * 申請件数レスポンスDTO
+ */
+export interface RequestCountResponse {
+  pendingManager: number;
+  pendingHr: number;
+}
+
+/**
+ * 申請一覧検索クエリDTO
+ */
+export interface RequestListQuery {
+  statuses?: string[];
+  employeeName?: string;
+  departmentIds?: number[];
+  branchIds?: number[];
+  positionIds?: number[];
+  page?: number;
+  limit?: number;
+}
+
+/**
+ * 申請一覧アイテムDTO
+ */
+export interface RequestListItem {
+  id: number;
+  title: string; // textフィールド
+  employee: {
+    id: number;
+    firstName: string;
+    lastName: string;
+  };
+  departments: Array<{
+    id: number;
+    name: string;
+  }>;
+  branches: Array<{
+    id: number;
+    name: string;
+  }>;
+  positions: Array<{
+    id: number;
+    name: string;
+  }>;
+  status: string;
+  submittedAt: string | null; // ISO 8601形式
+  updatedAt: string; // ISO 8601形式
+}
+
+/**
+ * 申請一覧レスポンスDTO
+ */
+export interface RequestListResponse {
+  requests: RequestListItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

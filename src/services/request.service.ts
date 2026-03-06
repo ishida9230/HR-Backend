@@ -6,8 +6,17 @@ import {
   hasPendingRequestByEmployeeId,
   getRequestByIdWithoutRelations,
   updateRequestIsHidden,
+  getRequestCounts,
+  getRequestList,
 } from "../repositories/request.repository";
-import { CreateRequestRequest, RequestResponse } from "../dtos/request.dto";
+import {
+  CreateRequestRequest,
+  RequestResponse,
+  RequestCountResponse,
+  RequestListQuery,
+  RequestListResponse,
+  RequestListItem,
+} from "../dtos/request.dto";
 import { getEmployeeById } from "../repositories/employee.repository";
 import { getBranchById } from "../repositories/branch.repository";
 import { getDepartmentById } from "../repositories/department.repository";
@@ -296,4 +305,93 @@ export async function hideChangeRequest(id: number): Promise<{ id: number }> {
 
   // レスポンスは更新したrequestIdのみ
   return { id: updatedRequest.id };
+}
+
+/**
+ * 申請件数をステータス別に取得（ビジネスロジック層）
+ * @returns ステータス別の申請件数
+ */
+export async function getRequestCountsService(): Promise<RequestCountResponse> {
+  return await getRequestCounts();
+}
+
+/**
+ * 申請一覧を取得（ビジネスロジック層）
+ * @param query 検索・フィルタリング・ページネーションクエリ
+ * @returns 申請一覧とページネーション情報
+ */
+export async function getRequestListService(query: RequestListQuery): Promise<RequestListResponse> {
+  const { statuses, employeeName, departmentIds, branchIds, positionIds, page = 1, limit = 25 } = query;
+
+  // ステータスをRequestStatus enumに変換（複数対応）
+  const requestStatuses: RequestStatus[] | undefined = statuses
+    ? statuses.map((s) => s as RequestStatus).filter((s) => Object.values(RequestStatus).includes(s))
+    : undefined;
+
+  // リポジトリ層で取得
+  const { requests, total, page: resultPage, limit: resultLimit, totalPages } = await getRequestList({
+    statuses: requestStatuses,
+    employeeName,
+    departmentIds,
+    branchIds,
+    positionIds,
+    page,
+    limit,
+  });
+
+  // エンティティをDTOに変換
+  const requestListItems: RequestListItem[] = requests.map((request) => {
+    // 従業員のすべての所属情報を取得
+    const assignments = request.employee.assignments || [];
+
+    // 部署、支店、役職を配列として取得（重複を除去）
+    const departmentMap = new Map<number, { id: number; name: string }>();
+    const branchMap = new Map<number, { id: number; name: string }>();
+    const positionMap = new Map<number, { id: number; name: string }>();
+
+    assignments.forEach((assignment) => {
+      if (assignment.department) {
+        departmentMap.set(assignment.department.id, {
+          id: assignment.department.id,
+          name: assignment.department.name,
+        });
+      }
+      if (assignment.branch) {
+        branchMap.set(assignment.branch.id, {
+          id: assignment.branch.id,
+          name: assignment.branch.name,
+        });
+      }
+      if (assignment.position) {
+        positionMap.set(assignment.position.id, {
+          id: assignment.position.id,
+          name: assignment.position.name,
+        });
+      }
+    });
+
+    return {
+      id: request.id,
+      title: request.text,
+      employee: {
+        id: request.employee.id,
+        firstName: request.employee.firstName,
+        lastName: request.employee.lastName,
+      },
+      departments: Array.from(departmentMap.values()),
+      branches: Array.from(branchMap.values()),
+      positions: Array.from(positionMap.values()),
+      status: request.status,
+      submittedAt: request.submittedAt ? request.submittedAt.toISOString() : null,
+      updatedAt: request.updatedAt.toISOString(),
+    };
+  });
+
+  return {
+    requests: requestListItems,
+    total,
+    page: resultPage,
+    limit: resultLimit,
+    totalPages,
+  };
 }
