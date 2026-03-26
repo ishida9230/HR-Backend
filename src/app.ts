@@ -15,6 +15,8 @@ import {
   hideRequestHandler,
   getRequestCountsHandler,
   getRequestListHandler,
+  getRequestForApprovalHandler,
+  processRequestActionHandler,
 } from "./controllers/request.controller";
 import HttpException from "./exceptions/HttpException";
 import { HTTP_STATUS, ERROR_MESSAGE_ENDPOINT_NOT_FOUND } from "./constants/error-messages";
@@ -79,6 +81,16 @@ app.get("/api/requests/list", (req, res, next) => {
 // 変更情報取得API
 app.get("/api/requests/:id", (req, res, next) => {
   void getRequestByIdHandler(req, res, next);
+});
+
+// 申請承認画面用の申請詳細取得API（前回の承認情報を含む）
+app.get("/api/requests/:id/approve", (req, res, next) => {
+  void getRequestForApprovalHandler(req, res, next);
+});
+
+// 申請承認・差し戻し統合API
+app.post("/api/requests/:id/action", (req, res, next) => {
+  void processRequestActionHandler(req, res, next);
 });
 
 // 変更申請を非表示にするAPI

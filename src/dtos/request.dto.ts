@@ -117,3 +117,43 @@ export interface RequestListResponse {
   limit: number;
   totalPages: number;
 }
+
+import { RequestStatus } from "../entities/Request";
+
+/**
+ * 承認・差し戻しリクエストDTO（統合API用）
+ */
+export interface RequestActionRequest {
+  status: RequestStatus;           // 次のステータス（必須、検証用）
+  comment?: string;               // コメント（差し戻し時のみ必須）
+  actedByEmployeeId: number;      // 実行者の従業員ID（必須）
+}
+
+/**
+ * 承認・差し戻しリクエストDTO（旧形式、後方互換性のため残す）
+ * @deprecated RequestActionRequestを使用してください
+ */
+export interface ApproveRequestRequest {
+  comment?: string;
+  actedByEmployeeId: number;
+}
+
+/**
+ * 前回の承認情報DTO
+ */
+export interface PreviousApprovalInfo {
+  actedAt: string | null; // ISO 8601形式
+  actedBy: {
+    id: number;
+    firstName: string;
+    lastName: string;
+  } | null;
+  comment: string | null; // コメント（差し戻し理由など）
+}
+
+/**
+ * 申請承認画面用レスポンスDTO（RequestResponseに前回の承認情報を追加）
+ */
+export interface RequestApprovalResponse extends RequestResponse {
+  previousApproval: PreviousApprovalInfo | null;
+}

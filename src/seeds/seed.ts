@@ -23,7 +23,6 @@ import { seedEmployees } from "./employees";
 import { seedEmployeeAssignments } from "./employeeAssignments";
 import { seedEmployeeRoles } from "./employeeRoles";
 import { seedRequests } from "./requests";
-import { seedRequests100 } from "./requests100";
 import { seedRequestItems } from "./requestItems";
 
 export async function seed() {
@@ -50,7 +49,6 @@ export async function seed() {
 
       // 申請関連のシード（従業員・部署に依存）
       await seedRequests(transactionalEntityManager.getRepository(Request));
-      await seedRequests100(transactionalEntityManager.getRepository(Request));
       await seedRequestItems(transactionalEntityManager.getRepository(RequestItem));
 
       console.log("✅ トランザクションをコミットしました");
