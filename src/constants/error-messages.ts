@@ -8,6 +8,7 @@ export const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,
   BAD_REQUEST: 400,
+  UNAUTHORIZED: 401,
   NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
@@ -30,3 +31,12 @@ export const ERROR_MESSAGE_DATA_FETCH_ERROR = "データの取得または変換
 export const ERROR_MESSAGE_PENDING_REQUEST_EXISTS =
   "既に承認待ちの変更申請が存在します。完了または差し戻しになるまで新しい申請は作成できません。";
 export const ERROR_MESSAGE_REQUEST_ALREADY_HIDDEN = "この申請は既に非表示になっています。";
+export const ERROR_MESSAGE_REQUEST_NOT_PROCESSABLE =
+  "この申請は処理可能な状態ではありません。";
+export const ERROR_MESSAGE_STATUS_MISMATCH = "statusが一致しません。期待値: {expectedStatus}, 送信値: {receivedStatus}";
+export const ERROR_MESSAGE_STATUS_REQUIRED = "statusが必要です。";
+export const ERROR_MESSAGE_ACTOR_ID_REQUIRED = "実行者IDが必要です。";
+export const ERROR_MESSAGE_REJECT_COMMENT_REQUIRED = "差し戻し時はコメントが必要です。";
+export const ERROR_MESSAGE_INVALID_STATUS = "無効なstatusです: {status}";
+export const ERROR_MESSAGE_ASSIGNMENTS_MUST_BE_ARRAY = "assignmentsは配列形式である必要があります。";
+export const ERROR_MESSAGE_ASSIGNMENTS_UPDATE_FAILED = "assignmentsの更新に失敗しました。";

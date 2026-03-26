@@ -59,7 +59,7 @@ erDiagram
     roles {
         integer id PK
         varchar name
-        text_array permissions "PostgreSQL text array型"
+        text_array permissions "PostgreSQL text[]（default: '{}'）"
         timestamp createdAt "カラム名: createdAt"
         timestamp updatedAt "カラム名: updatedAt"
     }
@@ -71,7 +71,7 @@ erDiagram
         integer branch_id FK
         integer position_id FK
         boolean superior_flag "default: false"
-        timestamp created_at "start_date, end_dateは未実装"
+        timestamp created_at
     }
     
     employee_roles {
@@ -88,7 +88,7 @@ erDiagram
         text text
         timestamp submitted_at "nullable"
         timestamp completed_at "nullable"
-        boolean is_hidden "default: false (追加フィールド)"
+        boolean is_hidden "default: false"
         timestamp created_at
         timestamp updated_at
     }

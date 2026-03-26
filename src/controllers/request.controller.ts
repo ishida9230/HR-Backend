@@ -5,8 +5,10 @@ import {
   hideChangeRequest,
   getRequestCountsService,
   getRequestListService,
+  getRequestForApprovalService,
+  processRequestActionService,
 } from "../services/request.service";
-import { CreateRequestRequest } from "../dtos/request.dto";
+import { CreateRequestRequest, RequestActionRequest } from "../dtos/request.dto";
 import { RequestListQuery } from "../dtos/request.dto";
 import HttpException from "../exceptions/HttpException";
 import {
@@ -14,6 +16,9 @@ import {
   ERROR_MESSAGE_INVALID_EMPLOYEE_ID,
   ERROR_MESSAGE_MISSING_REQUIRED_FIELDS,
   ERROR_MESSAGE_INVALID_REQUEST_ID,
+  ERROR_MESSAGE_STATUS_REQUIRED,
+  ERROR_MESSAGE_ACTOR_ID_REQUIRED,
+  ERROR_MESSAGE_REJECT_COMMENT_REQUIRED,
 } from "../constants/error-messages";
 import { validatePositiveIntegerId } from "../utils/validation";
 import { parseIdArray } from "../utils/query-parser";
@@ -219,5 +224,95 @@ export async function getRequestListHandler(
     response.status(HTTP_STATUS.OK).json(result);
   } catch (error) {
     next(error); // エラーをそのままエラーミドルウェアに渡す
+  }
+}
+
+/**
+ * GET /api/requests/:id/approve
+ * 申請承認画面用の申請詳細取得ハンドラー（前回の承認情報を含む）
+ */
+export async function getRequestForApprovalHandler(
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const rawId = parseInt(request.params.id, 10);
+    const idValidation = validatePositiveIntegerId(rawId, "requestId");
+    if (!idValidation.isValid) {
+      next(
+        new HttpException(HTTP_STATUS.BAD_REQUEST, ERROR_MESSAGE_INVALID_REQUEST_ID, {
+          requestId: idValidation.error?.value ?? request.params.id,
+        })
+      );
+      return;
+    }
+
+    const id = idValidation.id!;
+    const result = await getRequestForApprovalService(id);
+    response.status(HTTP_STATUS.OK).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/requests/:id/action
+ * 申請承認・差し戻し統合ハンドラー
+ */
+export async function processRequestActionHandler(
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const rawId = parseInt(request.params.id, 10);
+    const idValidation = validatePositiveIntegerId(rawId, "requestId");
+    if (!idValidation.isValid) {
+      next(
+        new HttpException(HTTP_STATUS.BAD_REQUEST, ERROR_MESSAGE_INVALID_REQUEST_ID, {
+          requestId: idValidation.error?.value ?? request.params.id,
+        })
+      );
+      return;
+    }
+
+    const id = idValidation.id!;
+    const body = request.body as RequestActionRequest;
+
+    // バリデーション: statusが必須
+    if (!body.status || typeof body.status !== "string") {
+      next(
+        new HttpException(HTTP_STATUS.BAD_REQUEST, ERROR_MESSAGE_STATUS_REQUIRED, {
+          body: request.body,
+        })
+      );
+      return;
+    }
+
+    // バリデーション: 実行者IDが必須
+    if (!body.actedByEmployeeId || typeof body.actedByEmployeeId !== "number") {
+      next(
+        new HttpException(HTTP_STATUS.BAD_REQUEST, ERROR_MESSAGE_ACTOR_ID_REQUIRED, {
+          body: request.body,
+        })
+      );
+      return;
+    }
+
+    // バリデーション: 差し戻し時（statusがCHANGES_REQUESTED）はコメントが必須
+    if (body.status === "CHANGES_REQUESTED" && (!body.comment || !body.comment.trim())) {
+      next(
+        new HttpException(HTTP_STATUS.BAD_REQUEST, ERROR_MESSAGE_REJECT_COMMENT_REQUIRED, {
+          body: request.body,
+        })
+      );
+      return;
+    }
+
+    const result = await processRequestActionService(id, body);
+    response.status(HTTP_STATUS.OK).json(result);
+  } catch (error) {
+    next(error);
   }
 }
